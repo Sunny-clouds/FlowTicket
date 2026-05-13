@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.onik.flowticket.mapper.TicketCategoryMapper">
+    <select id="selectList" resultType="com.onik.flowticket.entity.TicketCategory">
+        SELECT * FROM ticket_category
+        WHERE deleted = 0
+        <if test="onlyEnabled != null and onlyEnabled">AND status = 1</if>
+        ORDER BY sort ASC, id ASC
+    </select>
+
+    <select id="selectById" resultType="com.onik.flowticket.entity.TicketCategory">
+        SELECT * FROM ticket_category WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <insert id="insert" parameterType="com.onik.flowticket.entity.TicketCategory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ticket_category (category_name, category_code, description, sort, status, create_time, update_time, deleted)
+        VALUES (#{categoryName}, #{categoryCode}, #{description}, #{sort}, #{status}, NOW(), NOW(), 0)
+    </insert>
+
+    <update id="updateById" parameterType="com.onik.flowticket.entity.TicketCategory">
+        UPDATE ticket_category
+        <set>
+            <if test="categoryName != null">category_name = #{categoryName},</if>
+            <if test="categoryCode != null">category_code = #{categoryCode},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="sort != null">sort = #{sort},</if>
+            <if test="status != null">status = #{status},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <update id="logicDeleteById">
+        UPDATE ticket_category
+        SET deleted = 1, update_time = NOW()
+        WHERE id = #{id} AND deleted = 0
+    </update>
+</mapper>

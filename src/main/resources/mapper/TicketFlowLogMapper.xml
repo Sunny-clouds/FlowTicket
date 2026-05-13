@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.onik.flowticket.mapper.TicketFlowLogMapper">
+    <insert id="insert" parameterType="com.onik.flowticket.entity.TicketFlowLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ticket_flow_log (
+            ticket_id, operator_id, operation_type, operation_desc,
+            before_status, after_status, before_assignee_id, after_assignee_id, create_time
+        ) VALUES (
+            #{ticketId}, #{operatorId}, #{operationType}, #{operationDesc},
+            #{beforeStatus}, #{afterStatus}, #{beforeAssigneeId}, #{afterAssigneeId}, NOW()
+        )
+    </insert>
+
+    <sql id="LogColumns">
+        SELECT l.*, u.nickname AS operator_name
+        FROM ticket_flow_log l
+        LEFT JOIN `user` u ON u.id = l.operator_id
+    </sql>
+
+    <select id="selectByTicketId" resultType="com.onik.flowticket.vo.TicketFlowLogVo">
+        <include refid="LogColumns"/>
+        WHERE l.ticket_id = #{ticketId}
+        ORDER BY l.create_time ASC, l.id ASC
+    </select>
+
+    <select id="selectAll" resultType="com.onik.flowticket.vo.TicketFlowLogVo">
+        <include refid="LogColumns"/>
+        ORDER BY l.create_time DESC, l.id DESC
+    </select>
+
+    <select id="selectByOperatorId" resultType="com.onik.flowticket.vo.TicketFlowLogVo">
+        <include refid="LogColumns"/>
+        WHERE l.operator_id = #{operatorId}
+        ORDER BY l.create_time DESC, l.id DESC
+    </select>
+</mapper>

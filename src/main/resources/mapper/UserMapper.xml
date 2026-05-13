@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.onik.flowticket.mapper.UserMapper">
+
+    <select id="selectList" resultType="com.onik.flowticket.entity.User">
+        SELECT * FROM user
+        WHERE deleted = 0
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectById" resultType="com.onik.flowticket.entity.User">
+        SELECT * FROM `user`
+        WHERE id = #{id} AND deleted = 0
+    </select>
+    <select id="selectByUserName" resultType="com.onik.flowticket.entity.User">
+        SELECT * FROM `user`
+        WHERE username = #{username} AND deleted = 0
+    </select>
+
+    <insert id="insert" parameterType="com.onik.flowticket.entity.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `user` (
+            username, password, nickname, real_name, phone, email, avatar,
+            `role`, status, last_login_time, create_time, update_time, deleted
+        ) VALUES (
+            #{username}, #{password}, #{nickname}, #{realName}, #{phone}, #{email}, #{avatar},
+            #{role}, #{status}, #{lastLoginTime}, NOW(), NOW(), 0
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.onik.flowticket.entity.User">
+        UPDATE `user`
+        <set>
+            <if test="username != null">username = #{username},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="nickname != null">nickname = #{nickname},</if>
+            <if test="realName != null">real_name = #{realName},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            <if test="role != null">`role` = #{role},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="lastLoginTime != null">last_login_time = #{lastLoginTime},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <update id="logicDeleteById">
+        UPDATE `user`
+        SET deleted = 1,
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <!--根据用户 id 更新最后登录时间-->
+    <update id="updateLastLoginById">
+        UPDATE user SET last_login_time = NOW()
+        WHERE id = #{id} AND deleted = 0
+    </update>
+</mapper>

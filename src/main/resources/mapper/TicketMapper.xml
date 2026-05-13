@@ -1,0 +1,122 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.onik.flowticket.mapper.TicketMapper">
+
+    <select id="selectPage" resultType="com.onik.flowticket.vo.TicketVo">
+        SELECT t.*,
+               c.category_name,
+               cu.real_name AS creator_name,
+               au.real_name AS assignee_name
+        FROM ticket t
+        LEFT JOIN ticket_category c ON c.id = t.category_id
+        LEFT JOIN `user` cu ON cu.id = t.creator_id
+        LEFT JOIN `user` au ON au.id = t.assignee_id
+        WHERE t.deleted = 0
+        <if test="status != null">AND t.status = #{status}</if>
+        <if test="priority != null">AND t.priority = #{priority}</if>
+        <if test="categoryId != null">AND t.category_id = #{categoryId}</if>
+        <if test="creatorId != null">AND t.creator_id = #{creatorId}</if>
+        <if test="assigneeId != null">AND t.assignee_id = #{assigneeId}</if>
+        <if test="keyword != null and keyword != ''">
+            AND (t.ticket_no LIKE CONCAT('%', #{keyword}, '%')
+                OR t.title LIKE CONCAT('%', #{keyword}, '%')
+                OR t.content LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY t.update_time DESC, t.id DESC
+    </select>
+
+    <select id="selectVoById" resultType="com.onik.flowticket.vo.TicketVo">
+        SELECT t.*,
+               c.category_name,
+               cu.real_name AS creator_name,
+               au.real_name AS assignee_name
+        FROM ticket t
+        LEFT JOIN ticket_category c ON c.id = t.category_id
+        LEFT JOIN `user` cu ON cu.id = t.creator_id
+        LEFT JOIN `user` au ON au.id = t.assignee_id
+        WHERE t.id = #{id} AND t.deleted = 0
+    </select>
+
+    <select id="selectById" resultType="com.onik.flowticket.entity.Ticket">
+        SELECT * FROM ticket WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <select id="selectLastTicketNo" resultType="string">
+        SELECT ticket_no FROM ticket
+        WHERE ticket_no LIKE CONCAT(#{prefix}, '%')
+        ORDER BY ticket_no DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.onik.flowticket.entity.Ticket" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ticket (
+            ticket_no, title, content, category_id, creator_id, assignee_id,
+            priority, status, contact_name, contact_phone, contact_email,
+            handle_result, finish_time, close_time, create_time, update_time, deleted
+        ) VALUES (
+            #{ticketNo}, #{title}, #{content}, #{categoryId}, #{creatorId}, #{assigneeId},
+            #{priority}, #{status}, #{contactName}, #{contactPhone}, #{contactEmail},
+            #{handleResult}, #{finishTime}, #{closeTime}, NOW(), NOW(), 0
+        )
+    </insert>
+
+    <update id="update" parameterType="com.onik.flowticket.entity.Ticket">
+        UPDATE ticket
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="assigneeId != null">assignee_id = #{assigneeId},</if>
+            <if test="priority != null">priority = #{priority},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="contactName != null">contact_name = #{contactName},</if>
+            <if test="contactPhone != null">contact_phone = #{contactPhone},</if>
+            <if test="contactEmail != null">contact_email = #{contactEmail},</if>
+            <if test="handleResult != null">handle_result = #{handleResult},</if>
+            <if test="finishTime != null">finish_time = #{finishTime},</if>
+            <if test="closeTime != null">close_time = #{closeTime},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <select id="countTodayNew" resultType="long">
+        SELECT COUNT(*) FROM ticket
+        WHERE deleted = 0 AND DATE(create_time) = CURDATE()
+    </select>
+
+    <select id="countByStatus" resultType="long">
+        SELECT COUNT(*) FROM ticket
+        WHERE deleted = 0 AND status = #{status}
+    </select>
+
+    <select id="categoryDistribution" resultType="map">
+        SELECT COALESCE(c.category_name, '未分类') AS name, COUNT(*) AS value
+        FROM ticket t
+        LEFT JOIN ticket_category c ON c.id = t.category_id
+        WHERE t.deleted = 0
+        GROUP BY c.category_name
+        ORDER BY value DESC
+    </select>
+
+    <select id="sevenDayTrend" resultType="map">
+        SELECT DATE(create_time) AS date, COUNT(*) AS value
+        FROM ticket
+        WHERE deleted = 0 AND create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+        GROUP BY DATE(create_time)
+        ORDER BY date ASC
+    </select>
+
+    <select id="handlerRanking" resultType="map">
+        SELECT u.id AS handlerId, u.real_name AS handlerName, COUNT(*) AS value
+        FROM ticket t
+        INNER JOIN `user` u ON u.id = t.assignee_id
+        WHERE t.deleted = 0 AND t.assignee_id IS NOT NULL
+        GROUP BY u.id, u.nickname
+        ORDER BY value DESC
+        LIMIT 10
+    </select>
+</mapper>
+
