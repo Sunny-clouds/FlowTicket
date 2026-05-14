@@ -2,21 +2,27 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 
-const service = axios.create({
-  baseURL: process.env.VUE_APP_API_BASE_URL || '/api',
+const request = axios.create({
+  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:8080/api',
   timeout: 12000
 })
 
-function toError(message, detail) {
-  const error = new Error(message || '请求处理失败')
-  error.detail = detail
-  return error
+const PUBLIC_URLS = ['/users/login', '/users/register']
+
+function isSuccessCode(code) {
+  return Number(code) === 1
 }
 
-service.interceptors.request.use(
+function getErrorMessage(error) {
+  return error.response?.data?.msg || error.response?.data?.message || error.message || '网络请求异常'
+}
+
+request.interceptors.request.use(
   (config) => {
     const userStore = useUserStore()
-    if (userStore.token) {
+    const isPublic = PUBLIC_URLS.some((url) => config.url?.includes(url))
+
+    if (userStore.token && !isPublic) {
       config.headers.Authorization = `Bearer ${userStore.token}`
     }
     return config
@@ -24,36 +30,30 @@ service.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-service.interceptors.response.use(
+request.interceptors.response.use(
   (response) => {
     const body = response.data
     if (body && typeof body === 'object' && Object.prototype.hasOwnProperty.call(body, 'code')) {
-      if ([1, 200].includes(body.code)) {
-        return body.data
-      }
-      const message = body.msg || body.message || '请求处理失败'
-      ElMessage.error(message)
-      return Promise.reject(toError(message, body))
+      if (isSuccessCode(body.code)) return body.data
+      return Promise.reject(new Error(body.msg || body.message || '请求失败'))
     }
     return body
   },
   (error) => {
     const status = error.response?.status
-    const message = error.response?.data?.msg || error.response?.data?.message || error.message || '网络请求异常'
+    const message = getErrorMessage(error)
 
     if (status === 401) {
       const userStore = useUserStore()
       userStore.logout()
       ElMessage.warning('登录已过期，请重新登录')
       if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
+        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
       }
-    } else {
-      ElMessage.error(message)
     }
 
-    return Promise.reject(toError(message, error.response?.data || error))
+    return Promise.reject(new Error(message))
   }
 )
 
-export default service
+export default request

@@ -24,11 +24,10 @@
     <section class="login-panel">
       <div class="login-card">
         <h1>登录工作台</h1>
-        <p>请使用后端系统中的账号密码登录。</p>
 
         <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @keyup.enter="submit">
           <el-form-item label="账号" prop="username">
-            <el-input v-model="form.username" size="large" placeholder="请输入账号" clearable>
+            <el-input v-model="form.username" size="large" placeholder="请输入后端用户账号" clearable>
               <template #prefix><el-icon><User /></el-icon></template>
             </el-input>
           </el-form-item>
@@ -41,6 +40,11 @@
             登录系统
           </el-button>
         </el-form>
+
+        <div class="register-link">
+          还没有账号？
+          <router-link to="/register">立即注册</router-link>
+        </div>
       </div>
     </section>
   </div>
@@ -69,16 +73,22 @@ const rules = {
 }
 
 async function submit() {
+  if (loading.value) return
+
   try {
     await formRef.value.validate()
-    loading.value = true
+  } catch (error) {
+    ElMessage.warning('请先填写账号和密码')
+    return
+  }
+
+  loading.value = true
+  try {
     await userStore.login(form)
     ElMessage.success('登录成功')
     router.replace(route.query.redirect || '/dashboard')
   } catch (error) {
-    if (!error?.fields) {
-      console.error(error)
-    }
+    ElMessage.error(error?.message || '登录失败，请检查账号或密码')
   } finally {
     loading.value = false
   }
@@ -94,7 +104,6 @@ async function submit() {
 }
 
 .login-visual {
-  position: relative;
   padding: 64px;
   display: flex;
   flex-direction: column;
@@ -113,7 +122,6 @@ async function submit() {
 .brand-line span {
   font-size: 44px;
   font-weight: 800;
-  letter-spacing: 0;
 }
 
 .brand-line strong {
@@ -177,6 +185,18 @@ async function submit() {
 
 .login-btn {
   width: 100%;
+}
+
+.demo-tip,
+.register-link {
+  margin-top: 14px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.register-link a {
+  color: #2563eb;
+  font-weight: 600;
 }
 
 @media (max-width: 900px) {

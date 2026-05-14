@@ -2,15 +2,16 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <h2 class="page-title">工作台概览</h2>
-        <p class="page-subtitle">聚合工单处理进度、分类趋势和客服处理排行。</p>
+        <h2 class="page-title">后台首页</h2>
+        <p class="page-subtitle">按角色聚合工单进度、响应效率和待处理事项。</p>
       </div>
+      <el-button type="primary" :icon="Refresh" @click="loadDashboard">刷新数据</el-button>
     </div>
 
     <div class="stat-grid">
-      <el-card v-for="item in stats" :key="item.label" shadow="never">
+      <el-card v-for="item in cards" :key="item.label" shadow="never">
         <div class="stat-card">
-          <el-icon :class="item.type"><component :is="item.icon" /></el-icon>
+          <el-icon :class="item.className"><component :is="item.icon" /></el-icon>
           <div>
             <span>{{ item.label }}</span>
             <strong>{{ item.value }}</strong>
@@ -29,80 +30,69 @@
         <div ref="categoryRef" class="chart"></div>
       </div>
     </div>
-
-    <div class="panel">
-      <h3 class="panel-title">处理排行</h3>
-      <el-table :data="dashboard.handlerRanking || []" stripe>
-        <el-table-column prop="handlerName" label="处理人" min-width="160">
-          <template #default="{ row }">{{ row.handlerName || row.name || row.operatorName || '-' }}</template>
-        </el-table-column>
-        <el-table-column prop="count" label="处理数量" width="140">
-          <template #default="{ row }">{{ row.count || row.total || row.value || 0 }}</template>
-        </el-table-column>
-      </el-table>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import * as echarts from 'echarts'
+import { ElMessage } from 'element-plus'
+import { Refresh } from '@element-plus/icons-vue'
 import { fetchDashboardStats } from '@/api/stats'
 
 const trendRef = ref()
 const categoryRef = ref()
-const dashboard = ref({})
+const stats = ref({})
 let trendChart
 let categoryChart
 
-const stats = computed(() => [
-  { label: '今日新增', value: dashboard.value.todayNewTickets || 0, icon: 'Plus', type: 'blue' },
-  { label: '待处理', value: dashboard.value.pendingTickets || 0, icon: 'Warning', type: 'orange' },
-  { label: '处理中', value: dashboard.value.processingTickets || 0, icon: 'Loading', type: 'blue' },
-  { label: '已关闭', value: dashboard.value.closedTickets || 0, icon: 'CircleCheck', type: 'green' }
+const cards = computed(() => [
+  { label: '今日新增', value: stats.value.todayNewTickets || 0, icon: 'Plus', className: 'blue' },
+  { label: '待受理', value: stats.value.pendingTickets || 0, icon: 'Bell', className: 'orange' },
+  { label: '处理中', value: stats.value.processingTickets || 0, icon: 'Loading', className: 'purple' },
+  { label: '已关闭', value: stats.value.closedTickets || 0, icon: 'CircleCheck', className: 'green' }
 ])
 
-function pickLabel(row) {
-  return row.date || row.day || row.categoryName || row.name || row.label || '-'
-}
-
-function pickValue(row) {
-  return row.count || row.total || row.value || row.num || 0
+function pickValue(item, keys, fallback = 0) {
+  const key = keys.find((name) => Object.prototype.hasOwnProperty.call(item, name))
+  return key ? item[key] : fallback
 }
 
 function renderCharts() {
-  const trend = dashboard.value.sevenDayTrend || []
-  const categories = dashboard.value.categoryDistribution || []
+  const trend = stats.value.sevenDayTrend || []
+  const categories = stats.value.categoryDistribution || []
+  const trendLabels = trend.map((item) => pickValue(item, ['date', 'day', 'name', 'label'], ''))
+  const trendValues = trend.map((item) => pickValue(item, ['count', 'value', 'total'], 0))
+  const categoryData = categories.map((item) => ({
+    name: pickValue(item, ['categoryName', 'name', 'label'], '未分类'),
+    value: pickValue(item, ['count', 'value', 'total'], 0)
+  }))
 
-  trendChart = trendChart || echarts.init(trendRef.value)
+  if (!trendChart) trendChart = echarts.init(trendRef.value)
   trendChart.setOption({
     tooltip: { trigger: 'axis' },
     grid: { left: 36, right: 18, top: 24, bottom: 28 },
-    xAxis: { type: 'category', data: trend.map(pickLabel) },
+    xAxis: { type: 'category', data: trendLabels },
     yAxis: { type: 'value' },
-    series: [{ name: '新增', type: 'line', smooth: true, data: trend.map(pickValue), areaStyle: {}, color: '#2563eb' }]
+    series: [{ name: '工单数', type: 'line', smooth: true, data: trendValues, color: '#2563eb', areaStyle: { opacity: 0.12 } }]
   })
 
-  categoryChart = categoryChart || echarts.init(categoryRef.value)
+  if (!categoryChart) categoryChart = echarts.init(categoryRef.value)
   categoryChart.setOption({
     tooltip: { trigger: 'item' },
     legend: { bottom: 0 },
-    series: [
-      {
-        name: '分类',
-        type: 'pie',
-        radius: ['48%', '70%'],
-        center: ['50%', '42%'],
-        data: categories.map((item) => ({ value: pickValue(item), name: pickLabel(item) }))
-      }
-    ]
+    series: [{ name: '分类', type: 'pie', radius: ['48%', '70%'], center: ['50%', '42%'], data: categoryData }]
   })
 }
 
 async function loadDashboard() {
-  dashboard.value = await fetchDashboardStats()
-  await nextTick()
-  renderCharts()
+  try {
+    stats.value = await fetchDashboardStats()
+    await nextTick()
+    renderCharts()
+  } catch (error) {
+    ElMessage.error('统计数据加载失败')
+  }
 }
 
 function resizeCharts() {
@@ -151,20 +141,10 @@ onUnmounted(() => {
   font-size: 26px;
 }
 
-.blue {
-  color: #2563eb;
-  background: #dbeafe;
-}
-
-.orange {
-  color: #ea580c;
-  background: #ffedd5;
-}
-
-.green {
-  color: #16a34a;
-  background: #dcfce7;
-}
+.blue { color: #2563eb; background: #dbeafe; }
+.orange { color: #ea580c; background: #ffedd5; }
+.purple { color: #7c3aed; background: #ede9fe; }
+.green { color: #16a34a; background: #dcfce7; }
 
 .chart {
   height: 320px;

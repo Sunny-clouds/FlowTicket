@@ -1,44 +1,36 @@
 import { defineStore } from 'pinia'
 import { loginApi, getProfileApi } from '@/api/auth'
-
-export const ROLE_LABELS = {
-  ADMIN: '管理员',
-  SERVICE: '客服人员',
-  USER: '普通用户'
-}
-
-const ROLE_MAP = {
-  admin: 'ADMIN',
-  handler: 'SERVICE',
-  user: 'USER',
-  role_admin: 'ADMIN',
-  role_handler: 'SERVICE',
-  role_user: 'USER'
-}
-
-function normalizeRole(role) {
-  const key = String(role || '').toLowerCase()
-  return ROLE_MAP[key] || String(role || '').replace(/^ROLE_/i, '').toUpperCase()
-}
+import { ROLE_LABELS, normalizeRole } from '@/utils/dicts'
 
 function normalizeUser(user) {
-  if (!user) return user
+  if (!user) return null
   return {
     ...user,
-    rawRole: user.role,
+    realName: user.realName || user.username,
     role: normalizeRole(user.role)
   }
 }
 
-function userFromLogin(data) {
-  const { token, ...user } = data || {}
-  return { token, user: normalizeUser(user) }
+function parseLoginPayload(data) {
+  return {
+    token: data?.token,
+    user: normalizeUser(data)
+  }
+}
+
+function readStoredUser() {
+  try {
+    return normalizeUser(JSON.parse(localStorage.getItem('flowticket_user') || 'null'))
+  } catch (error) {
+    localStorage.removeItem('flowticket_user')
+    return null
+  }
 }
 
 export const useUserStore = defineStore('user', {
   state: () => ({
     token: localStorage.getItem('flowticket_token') || '',
-    user: normalizeUser(JSON.parse(localStorage.getItem('flowticket_user') || 'null'))
+    user: readStoredUser()
   }),
   getters: {
     role: (state) => state.user?.role || '',
@@ -49,29 +41,38 @@ export const useUserStore = defineStore('user', {
     setSession(payload) {
       this.token = payload.token
       this.user = normalizeUser(payload.user)
-      localStorage.setItem('flowticket_token', payload.token)
+      localStorage.setItem('flowticket_token', this.token)
       localStorage.setItem('flowticket_user', JSON.stringify(this.user))
     },
-    async login(form) {
-      const payload = userFromLogin(await loginApi(form))
-      if (!payload.token) {
-        throw new Error('登录接口未返回 token')
-      }
-      this.setSession(payload)
-      return payload.user
-    },
-    async loadProfile(force = false) {
-      if (!this.token) return null
-      if (!force && this.user) return this.user
-      this.user = normalizeUser(await getProfileApi())
-      localStorage.setItem('flowticket_user', JSON.stringify(this.user))
-      return this.user
-    },
-    logout() {
+    clearSession() {
       this.token = ''
       this.user = null
       localStorage.removeItem('flowticket_token')
       localStorage.removeItem('flowticket_user')
+    },
+    async login(form) {
+      this.clearSession()
+      const payload = parseLoginPayload(await loginApi(form))
+      if (!payload.token) {
+        throw new Error('登录接口未返回 token')
+      }
+      this.setSession(payload)
+      return this.user
+    },
+    async loadProfile(force = false) {
+      if (!this.token) return null
+      if (!force && this.user) return this.user
+      const user = await getProfileApi()
+      this.user = normalizeUser(user)
+      localStorage.setItem('flowticket_user', JSON.stringify(this.user))
+      return this.user
+    },
+    updateProfile(profile) {
+      this.user = normalizeUser({ ...this.user, ...profile })
+      localStorage.setItem('flowticket_user', JSON.stringify(this.user))
+    },
+    logout() {
+      this.clearSession()
     }
   }
 })

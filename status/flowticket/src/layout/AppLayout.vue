@@ -1,6 +1,6 @@
 <template>
   <el-container class="app-layout">
-    <el-aside class="sidebar" width="232px">
+    <el-aside class="sidebar" width="236px">
       <div class="brand">
         <div class="brand-mark">FT</div>
         <div>
@@ -40,7 +40,8 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item disabled>{{ userStore.user?.department }}</el-dropdown-item>
+                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                <el-dropdown-item disabled>{{ userStore.user?.email || userStore.user?.phone || '未设置联系方式' }}</el-dropdown-item>
                 <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -65,11 +66,12 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const menus = computed(() => asyncMenus.filter((item) => item.meta.roles.includes(userStore.role)))
-const currentTitle = computed(() => route.meta.title || '工作台')
+const menus = computed(() => asyncMenus.filter((item) => !item.meta.hidden && item.meta.roles.includes(userStore.role)))
+const currentTitle = computed(() => route.meta.title || '后台首页')
 const avatarText = computed(() => (userStore.user?.realName || userStore.user?.username || 'U').slice(0, 1))
 
 function handleCommand(command) {
+  if (command === 'profile') router.push('/profile')
   if (command === 'logout') {
     userStore.logout()
     router.push('/login')

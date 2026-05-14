@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h2 class="page-title">提交工单</h2>
-        <p class="page-subtitle">描述问题、选择分类与优先级，系统会进入客服受理队列。</p>
+        <p class="page-subtitle">描述问题、选择分类与优先级，系统会进入客服受理流程。</p>
       </div>
     </div>
 
@@ -13,20 +13,13 @@
           <el-input v-model="form.title" maxlength="60" show-word-limit placeholder="请简要说明问题" />
         </el-form-item>
         <el-form-item label="问题分类" prop="categoryId">
-          <el-select v-model="form.categoryId" placeholder="请选择分类" filterable>
-            <el-option
-              v-for="item in categories"
-              :key="item.id"
-              :label="item.categoryName"
-              :value="item.id"
-            />
+          <el-select v-model="form.categoryId" placeholder="请选择分类">
+            <el-option v-for="item in categories" :key="item.id" :label="item.categoryName" :value="item.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="优先级" prop="priority">
           <el-radio-group v-model="form.priority">
-            <el-radio-button :label="1">低</el-radio-button>
-            <el-radio-button :label="2">中</el-radio-button>
-            <el-radio-button :label="3">高</el-radio-button>
+            <el-radio-button v-for="(item, key) in PRIORITY" :key="key" :label="Number(key)">{{ item.label }}</el-radio-button>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="问题描述" prop="content">
@@ -36,10 +29,10 @@
           <el-input v-model="form.contactName" placeholder="请输入联系人姓名" />
         </el-form-item>
         <el-form-item label="联系电话">
-          <el-input v-model="form.contactPhone" placeholder="请输入手机号" />
+          <el-input v-model="form.contactPhone" placeholder="请输入联系电话" />
         </el-form-item>
         <el-form-item label="联系邮箱">
-          <el-input v-model="form.contactEmail" placeholder="请输入邮箱" />
+          <el-input v-model="form.contactEmail" placeholder="请输入联系邮箱" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="submitting" @click="submit">提交工单</el-button>
@@ -56,8 +49,11 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createTicket } from '@/api/ticket'
 import { fetchCategories } from '@/api/category'
+import { PRIORITY } from '@/utils/dicts'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const formRef = ref()
 const submitting = ref(false)
 const categories = ref([])
@@ -67,9 +63,9 @@ const form = reactive({
   categoryId: '',
   priority: 2,
   content: '',
-  contactName: '',
-  contactPhone: '',
-  contactEmail: ''
+  contactName: userStore.user?.realName || '',
+  contactPhone: userStore.user?.phone || '',
+  contactEmail: userStore.user?.email || ''
 })
 
 const rules = {
