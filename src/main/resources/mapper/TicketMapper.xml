@@ -114,9 +114,8 @@
         FROM ticket t
         INNER JOIN `user` u ON u.id = t.assignee_id
         WHERE t.deleted = 0 AND t.assignee_id IS NOT NULL
-        GROUP BY u.id, u.nickname
+        GROUP BY u.id, u.real_name
         ORDER BY value DESC
         LIMIT 10
     </select>
 </mapper>
-

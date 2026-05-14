@@ -14,7 +14,7 @@
     </insert>
 
     <sql id="LogColumns">
-        SELECT l.*, u.nickname AS operator_name
+        SELECT l.*, u.real_name AS operator_name
         FROM ticket_flow_log l
         LEFT JOIN `user` u ON u.id = l.operator_id
     </sql>

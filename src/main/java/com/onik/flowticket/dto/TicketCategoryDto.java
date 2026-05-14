@@ -9,5 +9,5 @@ public class TicketCategoryDto {
     private String categoryCode;
     private String description;
     private Integer sort;
-    private Integer status;
+    private Long status;
 }

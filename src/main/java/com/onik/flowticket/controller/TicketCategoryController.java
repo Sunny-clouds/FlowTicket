@@ -2,6 +2,7 @@ package com.onik.flowticket.controller;
 
 import com.onik.flowticket.common.Result;
 import com.onik.flowticket.dto.TicketCategoryDto;
+import com.onik.flowticket.dto.TicketCategoryQueryDto;
 import com.onik.flowticket.entity.TicketCategory;
 import com.onik.flowticket.service.TicketCategoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,8 +24,9 @@ public class TicketCategoryController {
 
     @Operation(summary = "查询分类列表")
     @GetMapping
-    public Result<List<TicketCategory>> list(@RequestParam(required = false, defaultValue = "false") Boolean onlyEnabled) {
-        return Result.success(ticketCategoryService.list(onlyEnabled));
+    public Result<List<TicketCategory>> list(TicketCategoryQueryDto queryDto) {
+        // 从查询参数绑定 onlyEnabled/status，支持分类管理按状态筛选。
+        return Result.success(ticketCategoryService.list(queryDto));
     }
 
     @Operation(summary = "新增分类")

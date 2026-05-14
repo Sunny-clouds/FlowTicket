@@ -7,6 +7,8 @@
         SELECT * FROM ticket_category
         WHERE deleted = 0
         <if test="onlyEnabled != null and onlyEnabled">AND status = 1</if>
+        <!-- 分类管理列表的可选状态筛选条件。 -->
+        <if test="status != null">AND status = #{status}</if>
         ORDER BY sort ASC, id ASC
     </select>
 

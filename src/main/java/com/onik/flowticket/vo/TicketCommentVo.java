@@ -10,7 +10,6 @@ public class TicketCommentVo {
     private Long ticketId;
     private Long userId;
     private String username;
-    private String nickname;
     private String realName;
     private String role;
     private Long parentId;

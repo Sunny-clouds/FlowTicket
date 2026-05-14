@@ -2,6 +2,7 @@ package com.onik.flowticket.service.impl;
 
 import com.onik.flowticket.common.*;
 import com.onik.flowticket.dto.TicketCategoryDto;
+import com.onik.flowticket.dto.TicketCategoryQueryDto;
 import com.onik.flowticket.entity.TicketCategory;
 import com.onik.flowticket.mapper.TicketCategoryMapper;
 import com.onik.flowticket.service.TicketCategoryService;
@@ -25,9 +26,10 @@ public class TicketCategoryServiceImpl implements TicketCategoryService {
      * 查询工单分类列表，可按需要只返回已启用的分类。
      */
     @Override
-    public List<TicketCategory> list(Boolean onlyEnabled) {
+    public List<TicketCategory> list(TicketCategoryQueryDto queryDto) {
         // onlyEnabled=true 时只返回启用分类，适合前端提交工单时使用。
-        return ticketCategoryMapper.selectList(onlyEnabled);
+        // 未传筛选条件时使用空查询对象，保持原来的全量列表行为。
+        return ticketCategoryMapper.selectList(queryDto == null ? new TicketCategoryQueryDto() : queryDto);
     }
 
     /**
