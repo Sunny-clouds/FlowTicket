@@ -12,6 +12,8 @@ public final class TicketOperationConstant {
     public static final String COMPLETE = "COMPLETE";
     public static final String CLOSE = "CLOSE";
     public static final String REJECT = "REJECT";
+    public static final String URGE_PENDING = "URGE_PENDING";
+    public static final String URGE_PROCESSING = "URGE_PROCESSING";
 
     public static final String DESC_CREATE = "用户创建工单";
     public static final String DESC_ASSIGN = "管理员将工单分配给客服";
@@ -20,4 +22,6 @@ public final class TicketOperationConstant {
     public static final String DESC_COMPLETE = "客服处理完成，等待用户确认";
     public static final String DESC_CLOSE = "工单关闭";
     public static final String DESC_REJECT = "管理员驳回工单";
+    public static final String DESC_URGE_PENDING = "用户催促待受理工单";
+    public static final String DESC_URGE_PROCESSING = "用户催促处理中工单";
 }

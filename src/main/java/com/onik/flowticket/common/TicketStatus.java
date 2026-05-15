@@ -10,38 +10,29 @@ public final class TicketStatus {
     public static final Integer PROCESSING = 2;
     public static final Integer WAIT_CONFIRM = 3;
     public static final Integer COMPLETED = 4;
-    public static final Integer CLOSED = 5;
-    public static final Integer REJECTED = 6;
+    public static final Integer REJECTED = 5;
 
     /**
      * 将数据库里的状态数字转换成前端可直接展示的中文名称。
      */
     public static String nameOf(Integer status) {
-        if (PENDING.equals(status)) {
-            return "待受理";
+        if (status == null) {
+            return "-";
         }
-        if (PROCESSING.equals(status)) {
-            return "处理中";
+        switch (status) {
+            case 1 -> {return "待受理";}
+            case 2 -> {return "处理中";}
+            case 3 -> {return "待确认";}
+            case 4 -> {return "已完成";}
+            case 5 -> {return "已驳回";}
+            default -> {return "未知";}
         }
-        if (WAIT_CONFIRM.equals(status)) {
-            return "待确认";
-        }
-        if (COMPLETED.equals(status)) {
-            return "已完成";
-        }
-        if (CLOSED.equals(status)) {
-            return "已关闭";
-        }
-        if (REJECTED.equals(status)) {
-            return "已驳回";
-        }
-        return "未知";
     }
 
     /**
      * 终态工单不允许继续处理、回复、分配或改优先级。
      */
     public static boolean terminal(Integer status) {
-        return CLOSED.equals(status) || REJECTED.equals(status);
+        return COMPLETED.equals(status) || REJECTED.equals(status);
     }
 }

@@ -27,6 +27,8 @@ public interface TicketService {
 
     void reject(Long id, TicketRejectDto rejectDto);
 
+    void urge(Long id);
+
     List<TicketCommentVo> comments(Long id);
 
     List<TicketFlowLogVo> logs(Long id);

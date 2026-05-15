@@ -9,6 +9,14 @@ spring:
     # 应用名称，会出现在日志、监控或服务注册信息中。
     name: FlowTicket
 
+  data:
+    redis:
+      # Redis 用于站内消息实时发布订阅，本地默认配置即可直接使用。
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 3000ms
+
   # 数据库连接配置。
   datasource:
     url: jdbc:mysql://localhost:3306/flow_ticket?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true

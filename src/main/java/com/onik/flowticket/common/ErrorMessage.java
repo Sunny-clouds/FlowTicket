@@ -33,13 +33,20 @@ public final class ErrorMessage {
     public static final String TICKET_COMMENT_EMPTY = "回复内容不能为空";
     public static final String TICKET_COMPLETE_STATUS_INVALID = "只有处理中的工单可以提交确认";
     public static final String TICKET_HANDLE_RESULT_EMPTY = "处理结果不能为空";
-    public static final String TICKET_CLOSE_OWN_WAIT_CONFIRM_ONLY = "只能确认关闭自己的待确认工单";
-    public static final String TICKET_HANDLER_CLOSE_PROCESSING_ONLY = "客服只能关闭处理中的工单";
-    public static final String TICKET_CLOSE_ACCESS_DENIED = "无权关闭工单";
+    public static final String TICKET_CLOSE_OWN_WAIT_CONFIRM_ONLY = "只能确认完成自己的待确认工单";
+    public static final String TICKET_HANDLER_CLOSE_PROCESSING_ONLY = "客服只能完成处理中的工单";
+    public static final String TICKET_CLOSE_ACCESS_DENIED = "无权完成工单";
     public static final String TICKET_REJECT_PENDING_ONLY = "只有待受理工单可以驳回";
     public static final String TICKET_VIEW_OWN_ONLY = "只能查看自己的工单";
     public static final String TICKET_VIEW_ASSIGNED_ONLY = "只能查看分配给自己的工单";
     public static final String TICKET_COMMENT_ACCESS_DENIED = "无权回复该工单";
     public static final String TICKET_HANDLE_ASSIGNED_ONLY = "只能处理分配给自己的工单";
-    public static final String TICKET_TERMINAL_CANNOT_MODIFY = "已关闭或已驳回的工单不能继续修改";
+    public static final String TICKET_TERMINAL_CANNOT_MODIFY = "已完成或已驳回的工单不能继续修改";
+    public static final String TICKET_URGE_USER_ONLY = "只有工单提交人可以催促工单";
+    public static final String TICKET_URGE_OWN_ONLY = "只能催促自己提交的工单";
+    public static final String TICKET_URGE_STATUS_INVALID = "只有待受理或处理中的工单可以催促";
+    public static final String TICKET_URGE_TOO_EARLY = "该状态超过 10 分钟后才能催促";
+    public static final String TICKET_URGE_ALREADY_USED = "该状态已经催促过一次";
+    public static final String TICKET_URGE_WAIT_10_MINUTES = "该状态满 10 分钟后可催促";
+    public static final String TICKET_URGE_AVAILABLE = "可以催促";
 }

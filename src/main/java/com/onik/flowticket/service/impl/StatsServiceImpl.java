@@ -35,7 +35,9 @@ public class StatsServiceImpl implements StatsService {
         stats.setTodayNewTickets(ticketMapper.countTodayNew());
         stats.setPendingTickets(ticketMapper.countByStatus(TicketStatus.PENDING));
         stats.setProcessingTickets(ticketMapper.countByStatus(TicketStatus.PROCESSING));
-        stats.setClosedTickets(ticketMapper.countByStatus(TicketStatus.CLOSED));
+        stats.setWaitConfirmTickets(ticketMapper.countByStatus(TicketStatus.WAIT_CONFIRM));
+        stats.setCompletedTickets(ticketMapper.countByStatus(TicketStatus.COMPLETED));
+        stats.setRejectedTickets(ticketMapper.countByStatus(TicketStatus.REJECTED));
         stats.setCategoryDistribution(ticketMapper.categoryDistribution());
         stats.setSevenDayTrend(ticketMapper.sevenDayTrend());
         stats.setHandlerRanking(ticketMapper.handlerRanking());

@@ -12,6 +12,7 @@ import com.onik.flowticket.service.UserService;
 import com.onik.flowticket.vo.UserLoginVo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -27,6 +29,8 @@ public class UserServiceImpl implements UserService {
     private UserMapper userMapper;
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
 
     /**
      * 分页查询用户列表，供后台用户管理页面按页展示账号数据。
@@ -138,7 +142,11 @@ public class UserServiceImpl implements UserService {
             claims.put("userId", user.getId());
             claims.put("username", user.getUsername());
             claims.put("role", "ROLE_" + user.getRole());
-            userLoginVo.setToken(JwtUtil.generateToken(claims));
+            String token = JwtUtil.generateToken(claims);
+            userLoginVo.setToken(token);
+            // 登录成功后把 token 放入 Redis，过期时间与 JWT 保持一致。
+            redisTemplate.opsForValue().set(RedisKeyConstant.USER_TOKEN_PREFIX + user.getId(), token,
+                    JwtUtil.EXPIRE_TIME, TimeUnit.MILLISECONDS);
             return userLoginVo;
         }
         throw new RuntimeException(ErrorMessage.USERNAME_OR_PASSWORD_ERROR);

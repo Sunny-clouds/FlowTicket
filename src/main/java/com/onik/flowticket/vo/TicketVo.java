@@ -27,4 +27,6 @@ public class TicketVo {
     private LocalDateTime closeTime;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+    private Boolean canUrge;
+    private String urgeMessage;
 }

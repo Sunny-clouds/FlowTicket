@@ -25,7 +25,7 @@ public final class JwtUtil {
     /**
      * token 有效期：24 小时。
      */
-    private static final long EXPIRE_TIME = 24 * 60 * 60 * 1000L;
+    public static final long EXPIRE_TIME = 24 * 60 * 60 * 1000L;
 
     private static final SecretKey KEY = Keys.hmacShaKeyFor(SIGN_KEY.getBytes(StandardCharsets.UTF_8));
 

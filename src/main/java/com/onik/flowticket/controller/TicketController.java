@@ -77,7 +77,7 @@ public class TicketController {
         return Result.success();
     }
 
-    @Operation(summary = "关闭工单")
+    @Operation(summary = "完成工单")
     @PostMapping("/{id}/close")
     public Result<Void> close(@PathVariable Long id) {
         ticketService.close(id);
@@ -88,6 +88,13 @@ public class TicketController {
     @PostMapping("/{id}/reject")
     public Result<Void> reject(@PathVariable Long id, @RequestBody TicketRejectDto rejectDto) {
         ticketService.reject(id, rejectDto);
+        return Result.success();
+    }
+
+    @Operation(summary = "催促工单")
+    @PostMapping("/{id}/urge")
+    public Result<Void> urge(@PathVariable Long id) {
+        ticketService.urge(id);
         return Result.success();
     }
 

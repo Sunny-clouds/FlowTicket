@@ -48,4 +48,9 @@ public interface UserMapper {
      * @param id
      */
     void updateLastLoginById(Long id);
+
+    /**
+     * 根据角色查询用户，用于给管理员或客服批量发送消息。
+     */
+    List<User> selectByRole(@Param("role") String role);
 }

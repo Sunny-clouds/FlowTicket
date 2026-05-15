@@ -18,7 +18,8 @@
         <if test="priority != null">AND t.priority = #{priority}</if>
         <if test="categoryId != null">AND t.category_id = #{categoryId}</if>
         <if test="creatorId != null">AND t.creator_id = #{creatorId}</if>
-        <if test="assigneeId != null">AND t.assignee_id = #{assigneeId}</if>
+        <if test="assigneeId != null and assigneeId == -1">AND t.assignee_id IS NULL</if>
+        <if test="assigneeId != null and assigneeId != -1">AND t.assignee_id = #{assigneeId}</if>
         <if test="keyword != null and keyword != ''">
             AND (t.ticket_no LIKE CONCAT('%', #{keyword}, '%')
                 OR t.title LIKE CONCAT('%', #{keyword}, '%')

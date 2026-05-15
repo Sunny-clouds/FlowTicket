@@ -3,6 +3,8 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.onik.flowticket.mapper.TicketCategoryMapper">
+
+
     <select id="selectList" resultType="com.onik.flowticket.entity.TicketCategory">
         SELECT * FROM ticket_category
         WHERE deleted = 0

@@ -18,6 +18,12 @@
         SELECT * FROM `user`
         WHERE username = #{username} AND deleted = 0
     </select>
+    <select id="selectByRole" resultType="com.onik.flowticket.entity.User">
+        SELECT * FROM `user`
+        WHERE `role` = #{role}
+          AND status = 1
+          AND deleted = 0
+    </select>
 
     <insert id="insert" parameterType="com.onik.flowticket.entity.User" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO `user` (

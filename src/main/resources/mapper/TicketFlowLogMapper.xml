@@ -35,4 +35,21 @@
         WHERE l.operator_id = #{operatorId}
         ORDER BY l.create_time DESC, l.id DESC
     </select>
+
+    <select id="countByTicketAndType" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM ticket_flow_log
+        WHERE ticket_id = #{ticketId}
+          AND operation_type = #{operationType}
+    </select>
+
+    <select id="selectLatestStatusStartTime" resultType="java.time.LocalDateTime">
+        SELECT create_time
+        FROM ticket_flow_log
+        WHERE ticket_id = #{ticketId}
+          AND after_status = #{status}
+          AND (before_status IS NULL OR before_status != after_status)
+        ORDER BY create_time DESC, id DESC
+        LIMIT 1
+    </select>
 </mapper>

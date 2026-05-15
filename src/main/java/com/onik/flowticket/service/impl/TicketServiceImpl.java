@@ -4,12 +4,12 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.onik.flowticket.common.*;
 import com.onik.flowticket.dto.*;
-import com.onik.flowticket.entity.Message;
 import com.onik.flowticket.entity.Ticket;
 import com.onik.flowticket.entity.TicketComment;
 import com.onik.flowticket.entity.TicketFlowLog;
 import com.onik.flowticket.entity.User;
 import com.onik.flowticket.mapper.*;
+import com.onik.flowticket.service.MessageService;
 import com.onik.flowticket.service.TicketService;
 import com.onik.flowticket.utils.SecurityUtils;
 import com.onik.flowticket.vo.TicketCommentVo;
@@ -23,6 +23,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -36,11 +37,11 @@ public class TicketServiceImpl implements TicketService {
     @Autowired
     private TicketFlowLogMapper ticketFlowLogMapper;
     @Autowired
-    private MessageMapper messageMapper;
-    @Autowired
     private UserMapper userMapper;
     @Autowired
     private SecurityUtils securityUtils;
+    @Autowired
+    private MessageService messageService;
 
     /**
      * 分页查询工单列表，并根据当前用户角色限制可见范围。
@@ -83,6 +84,7 @@ public class TicketServiceImpl implements TicketService {
         // 详情接口也要做权限控制，避免用户通过猜 id 查看别人的工单。
         ensureReadable(ticket);
         fillStatusName(ticket);
+        fillUrgeInfo(ticket);
         return ticket;
     }
 
@@ -214,7 +216,7 @@ public class TicketServiceImpl implements TicketService {
     public void complete(Long id, TicketProcessDto processDto) {
         User current = securityUtils.currentUser();
         Ticket ticket = mustTicket(id);
-        // 客服处理完成后，状态进入“待确认”，等待用户最终确认关闭。
+        // 客服处理完成后，状态进入“待确认”，等待用户最终确认完成。
         ensureAssignedHandler(current, ticket);
         ensureNotTerminal(ticket);
         if (!TicketStatus.PROCESSING.equals(ticket.getStatus())) {
@@ -250,7 +252,7 @@ public class TicketServiceImpl implements TicketService {
     }
 
     /**
-     * 关闭工单，根据当前用户角色校验不同的关闭条件。
+     * 完成工单，根据当前用户角色校验不同的完成条件。
      */
     @Override
     @Transactional
@@ -273,12 +275,24 @@ public class TicketServiceImpl implements TicketService {
         ensureNotTerminal(ticket);
         Ticket update = new Ticket();
         update.setId(id);
-        update.setStatus(TicketStatus.CLOSED);
+        update.setStatus(TicketStatus.COMPLETED);
         update.setCloseTime(LocalDateTime.now());
         ticketMapper.update(update);
         addLog(id, current.getId(),
                 TicketOperationConstant.CLOSE, TicketOperationConstant.DESC_CLOSE,
-                ticket.getStatus(), TicketStatus.CLOSED, ticket.getAssigneeId(), ticket.getAssigneeId());
+                ticket.getStatus(), TicketStatus.COMPLETED, ticket.getAssigneeId(), ticket.getAssigneeId());
+        if (ticket.getCreatorId() != null && !ticket.getCreatorId().equals(current.getId())) {
+            addMessage(ticket.getCreatorId(), current.getId(), id,
+                    MessageConstant.TYPE_TICKET_CLOSE,
+                    MessageConstant.TITLE_TICKET_CLOSE,
+                    MessageConstant.CONTENT_TICKET_CLOSE);
+        }
+        if (ticket.getAssigneeId() != null && !ticket.getAssigneeId().equals(current.getId())) {
+            addMessage(ticket.getAssigneeId(), current.getId(), id,
+                    MessageConstant.TYPE_TICKET_CLOSE,
+                    MessageConstant.TITLE_TICKET_CLOSE,
+                    MessageConstant.CONTENT_TICKET_CLOSE);
+        }
     }
 
     /**
@@ -307,6 +321,52 @@ public class TicketServiceImpl implements TicketService {
                 MessageConstant.TYPE_TICKET_REJECT,
                 MessageConstant.TITLE_TICKET_REJECT,
                 MessageConstant.CONTENT_TICKET_REJECT);
+    }
+
+    /**
+     * 用户催促待受理或处理中的工单，每个状态超过 10 分钟后只能催促一次。
+     */
+    @Override
+    @Transactional
+    public void urge(Long id) {
+        User current = securityUtils.currentUser();
+        if (!RoleConstant.USER.equals(current.getRole())) {
+            throw new RuntimeException(ErrorMessage.TICKET_URGE_USER_ONLY);
+        }
+        Ticket ticket = mustTicket(id);
+        if (!current.getId().equals(ticket.getCreatorId())) {
+            throw new RuntimeException(ErrorMessage.TICKET_URGE_OWN_ONLY);
+        }
+        String operationType = urgeOperationType(ticket.getStatus());
+        if (operationType == null) {
+            throw new RuntimeException(ErrorMessage.TICKET_URGE_STATUS_INVALID);
+        }
+        LocalDateTime statusStartTime = urgeStatusStartTime(ticket);
+        if (statusStartTime == null || Duration.between(statusStartTime, LocalDateTime.now()).toMinutes() < 10) {
+            throw new RuntimeException(ErrorMessage.TICKET_URGE_TOO_EARLY);
+        }
+        if (ticketFlowLogMapper.countByTicketAndType(id, operationType) > 0) {
+            throw new RuntimeException(ErrorMessage.TICKET_URGE_ALREADY_USED);
+        }
+        String desc = TicketStatus.PENDING.equals(ticket.getStatus())
+                ? TicketOperationConstant.DESC_URGE_PENDING
+                : TicketOperationConstant.DESC_URGE_PROCESSING;
+        addLog(id, current.getId(), operationType, desc,
+                ticket.getStatus(), ticket.getStatus(), ticket.getAssigneeId(), ticket.getAssigneeId());
+
+        if (TicketStatus.PENDING.equals(ticket.getStatus())) {
+            for (User admin : userMapper.selectByRole(RoleConstant.ADMIN)) {
+                addMessage(admin.getId(), current.getId(), id,
+                        MessageConstant.TYPE_TICKET_URGE,
+                        MessageConstant.TITLE_TICKET_URGE,
+                        MessageConstant.CONTENT_TICKET_URGE_PENDING);
+            }
+        } else if (ticket.getAssigneeId() != null) {
+            addMessage(ticket.getAssigneeId(), current.getId(), id,
+                    MessageConstant.TYPE_TICKET_URGE,
+                    MessageConstant.TITLE_TICKET_URGE,
+                    MessageConstant.CONTENT_TICKET_URGE_PROCESSING);
+        }
     }
 
     /**
@@ -392,7 +452,7 @@ public class TicketServiceImpl implements TicketService {
     }
 
     /**
-     * 校验工单是否仍可修改，已关闭或已驳回的工单不允许继续流转。
+     * 校验工单是否仍可修改，已完成或已驳回的工单不允许继续流转。
      */
     private void ensureNotTerminal(Ticket ticket) {
         if (TicketStatus.terminal(ticket.getStatus())) {
@@ -422,14 +482,8 @@ public class TicketServiceImpl implements TicketService {
      * 创建站内消息对象并入库，避免调用处直接传入一长串字段。
      */
     private void addMessage(Long receiverId, Long senderId, Long ticketId, String messageType, String title, String content) {
-        Message message = new Message();
-        message.setReceiverId(receiverId);
-        message.setSenderId(senderId);
-        message.setTicketId(ticketId);
-        message.setMessageType(messageType);
-        message.setTitle(title);
-        message.setContent(content);
-        messageMapper.insert(message);
+        // 统一通过 MessageService 创建消息，入库后会自动发布 Redis/SSE 实时提醒。
+        messageService.create(receiverId, senderId, ticketId, messageType, title, content);
     }
 
     /**
@@ -452,6 +506,63 @@ public class TicketServiceImpl implements TicketService {
     private void fillStatusName(TicketVo ticket) {
         // VO 中补充中文状态名，前端无需再维护一份状态字典。
         ticket.setStatusName(TicketStatus.nameOf(ticket.getStatus()));
+    }
+
+    private void fillUrgeInfo(TicketVo ticket) {
+        User current = securityUtils.currentUser();
+        ticket.setCanUrge(false);
+        if (!RoleConstant.USER.equals(current.getRole()) || !current.getId().equals(ticket.getCreatorId())) {
+            return;
+        }
+        String operationType = urgeOperationType(ticket.getStatus());
+        if (operationType == null) {
+            ticket.setUrgeMessage(ErrorMessage.TICKET_URGE_STATUS_INVALID);
+            return;
+        }
+        LocalDateTime statusStartTime = urgeStatusStartTime(ticket);
+        long minutes = statusStartTime == null ? 0 : Duration.between(statusStartTime, LocalDateTime.now()).toMinutes();
+        if (minutes < 10) {
+            ticket.setUrgeMessage(ErrorMessage.TICKET_URGE_WAIT_10_MINUTES);
+            return;
+        }
+        if (ticketFlowLogMapper.countByTicketAndType(ticket.getId(), operationType) > 0) {
+            ticket.setUrgeMessage(ErrorMessage.TICKET_URGE_ALREADY_USED);
+            return;
+        }
+        ticket.setCanUrge(true);
+        ticket.setUrgeMessage(ErrorMessage.TICKET_URGE_AVAILABLE);
+    }
+
+    private String urgeOperationType(Integer status) {
+        if (TicketStatus.PENDING.equals(status)) {
+            return TicketOperationConstant.URGE_PENDING;
+        }
+        if (TicketStatus.PROCESSING.equals(status)) {
+            return TicketOperationConstant.URGE_PROCESSING;
+        }
+        return null;
+    }
+
+    private LocalDateTime urgeStatusStartTime(Ticket ticket) {
+        if (TicketStatus.PENDING.equals(ticket.getStatus())) {
+            return ticket.getCreateTime();
+        }
+        if (TicketStatus.PROCESSING.equals(ticket.getStatus())) {
+            LocalDateTime startTime = ticketFlowLogMapper.selectLatestStatusStartTime(ticket.getId(), TicketStatus.PROCESSING);
+            return startTime == null ? ticket.getUpdateTime() : startTime;
+        }
+        return null;
+    }
+
+    private LocalDateTime urgeStatusStartTime(TicketVo ticket) {
+        if (TicketStatus.PENDING.equals(ticket.getStatus())) {
+            return ticket.getCreateTime();
+        }
+        if (TicketStatus.PROCESSING.equals(ticket.getStatus())) {
+            LocalDateTime startTime = ticketFlowLogMapper.selectLatestStatusStartTime(ticket.getId(), TicketStatus.PROCESSING);
+            return startTime == null ? ticket.getUpdateTime() : startTime;
+        }
+        return null;
     }
 
     /**

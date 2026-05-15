@@ -23,6 +23,12 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Redis：用于站内消息的发布/订阅，便于后续多实例部署时同步推送。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!--参数校验依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
