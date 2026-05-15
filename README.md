@@ -29,17 +29,20 @@ FlowTicket 是一个基于 Spring Boot + MyBatis + MySQL 开发的企业级工�
 
 ### 后端技术
 
-| 技术 | 说明              |
-|---|-----------------|
-| Spring Boot | 后端基础框架          |
-| Spring Web | RESTful 接口开发    |
-| MyBatis | 半ORM 框架，简化 CRUD |
-| MySQL | 关系型数据库          |
-| Spring Security | 登录认证与权限控制       |
-| JWT | 用户身份令牌          |
-| Lombok | 简化实体类代码         |
-| Knife4j  | 接口文档            |
-| Maven | 项目构建工具          |
+| 技术 | 说明 |
+|---|---|
+| Spring Boot | 后端基础框架，整合各类业务模块 |
+| Spring Web | 提供 RESTful 接口开发能力 |
+| MyBatis | 持久层框架，用于编写 Mapper 接口和 XML SQL |
+| MySQL | 关系型数据库，用于存储用户、工单、消息、日志等数据 |
+| Spring Security | 实现登录认证、接口鉴权和角色权限控制 |
+| JWT | 用户身份令牌，用于前后端分离场景下的无状态认证 |
+| Redis | 基于 Pub/Sub 实现消息发布订阅，配合 SSE 完成实时通知推送 |
+| SSE | 建立服务端到浏览器的单向长连接，实现站内消息实时推送 |
+| PageHelper | MyBatis 分页插件，用于列表分页查询 |
+| Lombok | 简化实体类、DTO、VO 等 Java 代码 |
+| Knife4j | 接口文档工具，便于接口测试和前后端联调 |
+| Maven | 项目构建和依赖管理工具 |
 
 ### 开发环境
 
@@ -49,6 +52,7 @@ FlowTicket 是一个基于 Spring Boot + MyBatis + MySQL 开发的企业级工�
 | Spring Boot | 3.5.x |
 | MyBatis | 3.5.x |
 | MySQL | 8.x |
+| Redis | 8.6.x |
 | Maven | 3.8+ |
 | IDEA | 2023+ |
 
@@ -250,13 +254,14 @@ FlowTicket 是一个基于 Spring Boot + MyBatis + MySQL 开发的企业级工�
 
 ## 七、项目亮点
 
-1. 设计了完整的工单业务流程，覆盖提交、分配、处理、确认、关闭等核心环节。
-2. 基于角色进行权限控制，区分管理员、客服人员和普通用户的操作范围。
-3. 通过工单状态流转规则，避免非法状态修改，保证业务数据一致性。
-4. 设计操作日志机制，记录关键业务操作，提升系统可追踪性。
-5. 使用 MyBatis 简化基础 CRUD，提高开发效率。
-6. 通过后台统计接口，为管理员提供工单处理情况的数据支持。
-7. 项目结构清晰，便于后期扩展 Redis、消息通知、文件上传、AI 辅助回复等功能。
+1.基于 Spring Security + JWT 实现登录认证和角色权限控制，区分管理员、客服人员和普通用户的操作范围。
+2.设计完整的工单业务流程，覆盖提交、分配、处理、确认、关闭等核心环节。
+3.通过工单状态流转规则限制非法状态修改，保证业务数据一致性。
+4.基于 Redis Pub/Sub + SSE 实现站内实时消息提醒，提升用户对工单处理进度的感知能力。
+5.设计操作日志机制，记录关键业务操作，方便后续问题追踪。
+6.使用 MyBatis 编写 Mapper 接口和 XML SQL，实现工单、回复、消息、日志等模块的数据持久化。
+7.编写后台统计接口，为管理员提供工单处理情况的数据支持。
+8.项目结构清晰，便于后续扩展附件上传、超时提醒、报表导出、AI 辅助回复等功能。
 
 ---
 
@@ -273,20 +278,78 @@ FlowTicket 是一个基于 Spring Boot + MyBatis + MySQL 开发的企业级工�
 
 ---
 
-## 九、项目状态
+## 九、后端运行说明
+1. 克隆项目
+git clone https://github.com/Sunny-clouds/FlowTicket.git
+2. 修改配置
 
-当前项目处于开发阶段，基础功能包括：
+修改 application.yml 中的数据库和 Redis 配置：
 
-- 用户登录注册（已完成）
-- JWT 认证（已完成）
-- 工单提交（已完成）
-- 工单分配（已完成）
-- 工单处理（已完成）
-- 工单回复（已完成）
-- 工单完成（已完成）
-- 操作日志（已完成）
-- 数据统计（已完成）
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/数据库名
+    username: root
+    password: 你的密码
 
-后续将继续完善附件上传、消息通知、Redis 限流、超时提醒和报表导出等功能。
+  data:
+    redis:
+      host: localhost
+      port: 6379
+3. 启动 Redis
+
+确保本地 Redis 服务已启动。
+
+4. 启动后端服务
+mvn spring-boot:run
+
+默认访问地址：
+
+http://localhost:8080
+
+接口文档地址：
+
+http://localhost:8080/doc.html
+前端运行说明
+
+进入前端目录：
+
+cd status/flowticket
+
+安装依赖：
+
+npm install
+
+启动项目：
+
+npm run serve
+
+打包项目：
+
+npm run build
+
+## 十、项目状态
+
+当前已完成功能：
+
+1.用户注册登录
+2.JWT 认证
+3.角色权限控制
+4.工单提交
+5.工单分配
+6.工单处理
+7.工单回复
+8.工单状态流转
+9.操作日志
+10.数据统计
+11.Redis Pub/Sub + SSE 实时消息提醒
+
+后续可扩展功能：
+
+附件上传
+超时提醒
+报表导出
+AI 辅助回复
+工单处理满意度评价
+Redis 限流
 
 ---
