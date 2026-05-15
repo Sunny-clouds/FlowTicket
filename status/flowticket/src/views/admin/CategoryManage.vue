@@ -63,10 +63,11 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { createCategory, deleteCategory, fetchCategories, updateCategory } from '@/api/category'
 import { formatDateTime } from '@/utils/format'
+import { showAppToast, showErrorToast } from '@/utils/toast'
 
 const loading = ref(false)
 const query = reactive({ keyword: '', status: '' })
@@ -136,18 +137,31 @@ async function saveCategory() {
     sort: form.sort,
     status: form.status
   }
-  if (editingCategory.value) await updateCategory(form.id, payload)
-  else await createCategory(payload)
-  dialogVisible.value = false
-  ElMessage.success('分类已保存')
-  loadCategories()
+  try {
+    if (editingCategory.value) await updateCategory(form.id, payload)
+    else await createCategory(payload)
+    dialogVisible.value = false
+    showAppToast({ message: '分类已保存' })
+    loadCategories()
+  } catch (error) {
+    showErrorToast(error, '保存分类失败')
+  }
 }
 
 async function remove(row) {
-  await ElMessageBox.confirm(`确认删除分类 ${row.categoryName}？`, '确认操作', { type: 'warning' })
-  await deleteCategory(row.id)
-  ElMessage.success('分类已删除')
-  loadCategories()
+  try {
+    await ElMessageBox.confirm(`确认删除分类 ${row.categoryName}？`, '确认操作', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消'
+    })
+    await deleteCategory(row.id)
+    showAppToast({ message: '分类已删除' })
+    loadCategories()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+    showErrorToast(error, '删除分类失败')
+  }
 }
 
 onMounted(loadCategories)

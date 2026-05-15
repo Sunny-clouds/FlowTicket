@@ -50,7 +50,9 @@ const cards = computed(() => [
   { label: '今日新增', value: stats.value.todayNewTickets || 0, icon: 'Plus', className: 'blue' },
   { label: '待受理', value: stats.value.pendingTickets || 0, icon: 'Bell', className: 'orange' },
   { label: '处理中', value: stats.value.processingTickets || 0, icon: 'Loading', className: 'purple' },
-  { label: '已关闭', value: stats.value.closedTickets || 0, icon: 'CircleCheck', className: 'green' }
+  { label: '待确认', value: stats.value.waitConfirmTickets || 0, icon: 'QuestionFilled', className: 'cyan' },
+  { label: '已完成', value: stats.value.completedTickets || 0, icon: 'SuccessFilled', className: 'green' },
+  { label: '已驳回', value: stats.value.rejectedTickets || 0, icon: 'CircleClose', className: 'red' }
 ])
 
 function pickValue(item, keys, fallback = 0) {
@@ -144,7 +146,10 @@ onUnmounted(() => {
 .blue { color: #2563eb; background: #dbeafe; }
 .orange { color: #ea580c; background: #ffedd5; }
 .purple { color: #7c3aed; background: #ede9fe; }
+.cyan { color: #0891b2; background: #cffafe; }
 .green { color: #16a34a; background: #dcfce7; }
+.slate { color: #475569; background: #e2e8f0; }
+.red { color: #dc2626; background: #fee2e2; }
 
 .chart {
   height: 320px;

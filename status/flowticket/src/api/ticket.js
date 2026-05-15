@@ -32,6 +32,10 @@ export function rejectTicket(id, data) {
   return request({ url: `/tickets/${id}/reject`, method: 'post', data })
 }
 
+export function urgeTicket(id) {
+  return request({ url: `/tickets/${id}/urge`, method: 'post' })
+}
+
 export function fetchTicketComments(id) {
   return request({ url: `/tickets/${id}/comments`, method: 'get' })
 }

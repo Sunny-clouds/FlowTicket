@@ -17,6 +17,7 @@
           <el-option v-for="(item, key) in PRIORITY" :key="key" :label="item.label" :value="Number(key)" />
         </el-select>
         <el-select v-model="query.assigneeId" placeholder="当前处理人" clearable style="width: 160px" @change="search">
+          <el-option label="未分配" :value="-1" />
           <el-option v-for="user in serviceUsers" :key="user.id" :label="user.realName || user.username" :value="user.id" />
         </el-select>
       </div>
@@ -57,11 +58,12 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { assignTicket, fetchTickets } from '@/api/ticket'
 import { fetchUsers } from '@/api/user'
 import { PRIORITY, TICKET_STATUS, priorityLabel, priorityType, statusLabel, statusType } from '@/utils/dicts'
+import { showAppToast, showErrorToast } from '@/utils/toast'
 
 const loading = ref(false)
 const tickets = ref([])
@@ -107,14 +109,23 @@ async function assign(row) {
     ElMessage.warning('请选择客服人员')
     return
   }
-  await assignTicket(row.id, { assigneeId: row.assigneeId })
-  ElMessage.success('工单已分配')
-  loadTickets()
+  try {
+    await assignTicket(row.id, { assigneeId: row.assigneeId })
+    showAppToast({ message: '工单已分配' })
+    loadTickets()
+  } catch (error) {
+    showErrorToast(error, '工单分配失败')
+  }
 }
 
 onMounted(() => {
   loadTickets()
   loadServiceUsers()
+  window.addEventListener('flowticket-ticket-updated', loadTickets)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('flowticket-ticket-updated', loadTickets)
 })
 </script>
 

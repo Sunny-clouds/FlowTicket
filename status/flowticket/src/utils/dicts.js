@@ -3,8 +3,7 @@ export const TICKET_STATUS = {
   2: { label: '处理中', type: 'warning' },
   3: { label: '待确认', type: 'primary' },
   4: { label: '已完成', type: 'success' },
-  5: { label: '已关闭', type: 'success' },
-  6: { label: '已驳回', type: 'danger' }
+  5: { label: '已驳回', type: 'danger' }
 }
 
 export const PRIORITY = {

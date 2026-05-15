@@ -45,8 +45,8 @@
         </el-table-column>
         <el-table-column label="操作" width="190" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="$router.push(`/tickets/${row.id}`)">详情</el-button>
-            <el-button v-if="userStore.role === 'user' && [3, 4].includes(row.status)" link type="success" @click="confirmClose(row)">确认关闭</el-button>
+            <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+            <el-button v-if="userStore.role === 'user' && row.status === 3" link type="success" @click="confirmClose(row)">确认完成</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -63,29 +63,38 @@
         />
       </div>
     </div>
+
+    <TicketDetailDrawer v-model="detailVisible" :ticket-id="activeTicketId" @updated="loadTickets" />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import { useRoute, useRouter } from 'vue-router'
 import { PRIORITY, TICKET_STATUS, priorityLabel, priorityType, statusLabel, statusType } from '@/utils/dicts'
 import { formatDateTime } from '@/utils/format'
 import { closeTicket, fetchTickets } from '@/api/ticket'
 import { useUserStore } from '@/stores/user'
+import { showAppToast, showErrorToast } from '@/utils/toast'
+import TicketDetailDrawer from '@/components/TicketDetailDrawer.vue'
 
 const userStore = useUserStore()
+const route = useRoute()
+const router = useRouter()
 const loading = ref(false)
 const tickets = ref([])
 const total = ref(0)
+const detailVisible = ref(false)
+const activeTicketId = ref(null)
 const query = reactive({ keyword: '', status: '', priority: '' })
 const page = reactive({ pageNum: 1, pageSize: 10 })
 
 const subtitle = computed(() => {
   if (userStore.role === 'admin') return '管理员可查看全部工单，并进入分配和统计流程。'
   if (userStore.role === 'handler') return '客服人员可查看分配给自己的工单并进行回复处理。'
-  return '普通用户可查看自己提交的工单、回复并确认关闭。'
+  return '普通用户可查看自己提交的工单、回复并确认完成。'
 })
 
 function buildParams() {
@@ -121,14 +130,60 @@ function resetSearch() {
   search()
 }
 
+function openDetail(row) {
+  activeTicketId.value = row.id
+  detailVisible.value = true
+  router.replace({ path: '/tickets', query: { ...route.query, detailId: row.id } })
+}
+
+function openDetailFromQuery() {
+  if (!route.query.detailId) return
+  activeTicketId.value = route.query.detailId
+  detailVisible.value = true
+}
+
 async function confirmClose(row) {
-  await ElMessageBox.confirm(`确认关闭工单 ${row.ticketNo}？`, '确认操作', { type: 'warning' })
-  await closeTicket(row.id)
-  ElMessage.success('工单已关闭')
+  try {
+    await ElMessageBox.confirm(`确认完成工单 ${row.ticketNo}？`, '确认操作', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消'
+    })
+    await closeTicket(row.id)
+    showAppToast({ message: '工单已完成' })
+    loadTickets()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+    showErrorToast(error, '完成工单失败')
+  }
+}
+
+function handleTicketUpdated() {
   loadTickets()
 }
 
-onMounted(loadTickets)
+onMounted(() => {
+  loadTickets()
+  openDetailFromQuery()
+  window.addEventListener('flowticket-ticket-updated', handleTicketUpdated)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('flowticket-ticket-updated', handleTicketUpdated)
+})
+
+watch(
+  () => route.query.detailId,
+  () => openDetailFromQuery()
+)
+
+watch(detailVisible, (visible) => {
+  if (!visible && route.query.detailId) {
+    const query = { ...route.query }
+    delete query.detailId
+    router.replace({ path: '/tickets', query })
+  }
+})
 </script>
 
 <style scoped>

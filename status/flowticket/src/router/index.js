@@ -6,7 +6,7 @@ export const asyncMenus = [
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('@/views/DashboardView.vue'),
-    meta: { title: '后台首页', icon: 'DataBoard', roles: ['admin', 'handler', 'user'] }
+    meta: { title: '后台首页', icon: 'DataBoard', roles: ['admin'] }
   },
   {
     path: '/tickets',
@@ -64,6 +64,27 @@ export const asyncMenus = [
   }
 ]
 
+export function defaultPathByRole(role) {
+  if (role === 'admin') return '/dashboard'
+  if (role === 'handler') return '/service/queue'
+  return '/tickets'
+}
+
+export function canRoleVisitPath(role, path) {
+  const purePath = String(path || '').split('?')[0]
+  const target = asyncMenus.find((item) => item.path === purePath || (item.path.includes('/:') && purePath.startsWith(item.path.split('/:')[0])))
+  return !target?.meta?.roles || target.meta.roles.includes(role)
+}
+
+function readStoredRole() {
+  try {
+    const user = JSON.parse(localStorage.getItem('flowticket_user') || 'null')
+    return user?.role
+  } catch (error) {
+    return ''
+  }
+}
+
 const routes = [
   {
     path: '/login',
@@ -80,7 +101,7 @@ const routes = [
   {
     path: '/',
     component: () => import('@/layout/AppLayout.vue'),
-    redirect: '/dashboard',
+    redirect: () => defaultPathByRole(readStoredRole()),
     children: asyncMenus
   },
   {
@@ -91,7 +112,7 @@ const routes = [
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/dashboard'
+    redirect: () => defaultPathByRole(readStoredRole())
   }
 ]
 
@@ -105,7 +126,15 @@ router.beforeEach(async (to) => {
   document.title = `${to.meta.title || 'FlowTicket'} - FlowTicket`
 
   if (to.meta.public) {
-    if (to.path === '/login' && userStore.isLogin) return '/dashboard'
+    if (to.path === '/login' && userStore.isLogin) {
+      try {
+        await userStore.loadProfile()
+      } catch (error) {
+        userStore.logout()
+        return true
+      }
+      return defaultPathByRole(userStore.role)
+    }
     return true
   }
 
@@ -113,7 +142,15 @@ router.beforeEach(async (to) => {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
 
-  await userStore.loadProfile()
+  try {
+    await userStore.loadProfile()
+  } catch (error) {
+    userStore.logout()
+    return { path: '/login', query: { redirect: to.fullPath } }
+  }
+  if (to.path === '/') {
+    return defaultPathByRole(userStore.role)
+  }
   const roles = to.meta.roles
   if (roles && !roles.includes(userStore.role)) {
     return '/403'

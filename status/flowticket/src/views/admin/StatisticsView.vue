@@ -46,7 +46,7 @@ const cards = computed(() => [
   { label: '今日新增', value: stats.value.todayNewTickets || 0, desc: '今日提交工单' },
   { label: '待受理', value: stats.value.pendingTickets || 0, desc: '需要管理员分配' },
   { label: '处理中', value: stats.value.processingTickets || 0, desc: '客服处理中' },
-  { label: '已关闭', value: stats.value.closedTickets || 0, desc: '用户确认关闭' }
+  { label: '已完成', value: stats.value.completedTickets || 0, desc: '用户确认完成' }
 ])
 
 function pickValue(item, keys, fallback = 0) {

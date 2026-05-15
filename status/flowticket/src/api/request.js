@@ -1,6 +1,6 @@
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { showAppToast } from '@/utils/toast'
 
 const request = axios.create({
   baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:8080/api',
@@ -8,6 +8,8 @@ const request = axios.create({
 })
 
 const PUBLIC_URLS = ['/users/login', '/users/register']
+const AUTH_EXPIRED_NOTICE_KEY = 'flowticket_auth_expired_notice'
+let authExpiredNotified = false
 
 function isSuccessCode(code) {
   return Number(code) === 1
@@ -46,10 +48,18 @@ request.interceptors.response.use(
     if (status === 401) {
       const userStore = useUserStore()
       userStore.logout()
-      ElMessage.warning('登录已过期，请重新登录')
-      if (window.location.pathname !== '/login') {
-        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
+      if (!authExpiredNotified) {
+        authExpiredNotified = true
+        const notice = '登录已过期，请重新登录'
+        sessionStorage.setItem(AUTH_EXPIRED_NOTICE_KEY, notice)
+        showAppToast({ type: 'warning', message: notice, duration: 8000 })
       }
+      if (window.location.pathname !== '/login') {
+        window.setTimeout(() => {
+          window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
+        }, 200)
+      }
+      return new Promise(() => {})
     }
 
     return Promise.reject(new Error(message))

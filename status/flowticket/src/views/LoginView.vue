@@ -51,10 +51,12 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { showAppToast } from '@/utils/toast'
+import { canRoleVisitPath, defaultPathByRole } from '@/router'
 
 const route = useRoute()
 const router = useRouter()
@@ -72,6 +74,16 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
+onMounted(() => {
+  const notice = sessionStorage.getItem('flowticket_auth_expired_notice')
+  if (!notice) return
+
+  sessionStorage.removeItem('flowticket_auth_expired_notice')
+  window.setTimeout(() => {
+    showAppToast({ type: 'warning', message: notice, duration: 8000 })
+  }, 80)
+})
+
 async function submit() {
   if (loading.value) return
 
@@ -84,9 +96,11 @@ async function submit() {
 
   loading.value = true
   try {
-    await userStore.login(form)
-    ElMessage.success('登录成功')
-    router.replace(route.query.redirect || '/dashboard')
+    const user = await userStore.login(form)
+    showAppToast({ message: '登录成功！欢迎回来。' })
+    const redirect = route.query.redirect
+    const fallback = defaultPathByRole(user?.role)
+    router.replace(redirect && canRoleVisitPath(user?.role, redirect) ? redirect : fallback)
   } catch (error) {
     ElMessage.error(error?.message || '登录失败，请检查账号或密码')
   } finally {

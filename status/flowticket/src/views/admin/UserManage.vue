@@ -88,11 +88,12 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { ROLE_LABELS, normalizeRole } from '@/utils/dicts'
 import { formatDateTime } from '@/utils/format'
 import { createUser, deleteUser, fetchUsers, updateUser } from '@/api/user'
+import { showAppToast, showErrorToast } from '@/utils/toast'
 
 const loading = ref(false)
 const users = ref([])
@@ -158,18 +159,31 @@ async function saveUser() {
     role: form.role,
     status: form.status
   }
-  if (editingUser.value) await updateUser(form.id, payload)
-  else await createUser(payload)
-  dialogVisible.value = false
-  ElMessage.success('用户已保存')
-  loadUsers()
+  try {
+    if (editingUser.value) await updateUser(form.id, payload)
+    else await createUser(payload)
+    dialogVisible.value = false
+    showAppToast({ message: '用户已保存' })
+    loadUsers()
+  } catch (error) {
+    showErrorToast(error, '保存用户失败')
+  }
 }
 
 async function remove(row) {
-  await ElMessageBox.confirm(`确认删除用户 ${row.realName || row.username}？`, '确认操作', { type: 'warning' })
-  await deleteUser(row.id)
-  ElMessage.success('用户已删除')
-  loadUsers()
+  try {
+    await ElMessageBox.confirm(`确认删除用户 ${row.realName || row.username}？`, '确认操作', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消'
+    })
+    await deleteUser(row.id)
+    showAppToast({ message: '用户已删除' })
+    loadUsers()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+    showErrorToast(error, '删除用户失败')
+  }
 }
 
 onMounted(loadUsers)

@@ -1,5 +1,5 @@
 <template>
-  <div class="page">
+  <div class="page ticket-detail-page">
     <div class="page-header">
       <div>
         <h2 class="page-title">工单详情</h2>
@@ -7,7 +7,7 @@
       </div>
       <div>
         <el-button @click="$router.back()">返回</el-button>
-        <el-button v-if="canClose" type="success" @click="closeCurrentTicket">确认关闭</el-button>
+        <el-button v-if="canClose" type="success" @click="closeCurrentTicket">确认完成</el-button>
       </div>
     </div>
 
@@ -78,13 +78,14 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { priorityLabel, priorityType, statusLabel, statusType } from '@/utils/dicts'
 import { formatDateTime } from '@/utils/format'
 import { closeTicket, fetchTicketComments, fetchTicketDetail, fetchTicketLogs, processTicket, rejectTicket, replyTicket } from '@/api/ticket'
 import { useUserStore } from '@/stores/user'
+import { showAppToast, showErrorToast } from '@/utils/toast'
 
 const route = useRoute()
 const userStore = useUserStore()
@@ -96,7 +97,7 @@ const replies = ref([])
 const processForm = reactive({ content: '', handleResult: '' })
 
 const canProcess = computed(() => userStore.role === 'handler' && ticket.value.assigneeId === userStore.user?.id && [1, 2].includes(ticket.value.status))
-const canClose = computed(() => userStore.role === 'user' && ticket.value.creatorId === userStore.user?.id && [3, 4].includes(ticket.value.status))
+const canClose = computed(() => userStore.role === 'user' && ticket.value.creatorId === userStore.user?.id && ticket.value.status === 3)
 
 async function loadDetail() {
   loading.value = true
@@ -116,10 +117,14 @@ async function loadDetail() {
 }
 
 async function submitReply() {
-  await replyTicket(route.params.id, { parentId: null, content: replyContent.value.trim() })
-  replyContent.value = ''
-  ElMessage.success('回复已添加')
-  loadDetail()
+  try {
+    await replyTicket(route.params.id, { parentId: null, content: replyContent.value.trim() })
+    replyContent.value = ''
+    showAppToast({ message: '回复已添加' })
+    loadDetail()
+  } catch (error) {
+    showErrorToast(error, '回复失败')
+  }
 }
 
 async function processCurrentTicket() {
@@ -127,31 +132,61 @@ async function processCurrentTicket() {
     ElMessage.warning('请填写处理说明和处理结果')
     return
   }
-  await processTicket(route.params.id, { ...processForm })
-  ElMessage.success('工单已提交用户确认')
-  loadDetail()
+  try {
+    await processTicket(route.params.id, { ...processForm })
+    showAppToast({ message: '工单已提交用户确认' })
+    loadDetail()
+  } catch (error) {
+    showErrorToast(error, '提交处理结果失败')
+  }
 }
 
 async function rejectCurrentTicket() {
-  const { value } = await ElMessageBox.prompt('请输入驳回原因', '驳回工单', { inputType: 'textarea' })
-  await rejectTicket(route.params.id, { reason: value })
-  ElMessage.success('工单已驳回')
-  loadDetail()
+  try {
+    const { value } = await ElMessageBox.prompt('请输入驳回原因', '驳回工单', { inputType: 'textarea' })
+    await rejectTicket(route.params.id, { reason: value })
+    showAppToast({ message: '工单已驳回' })
+    loadDetail()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+    showErrorToast(error, '驳回工单失败')
+  }
 }
 
 async function closeCurrentTicket() {
-  await closeTicket(route.params.id)
-  ElMessage.success('工单已关闭')
-  loadDetail()
+  try {
+    await closeTicket(route.params.id)
+    showAppToast({ message: '工单已完成' })
+    loadDetail()
+  } catch (error) {
+    showErrorToast(error, '完成工单失败')
+  }
 }
 
-onMounted(loadDetail)
+function handleTicketUpdated(event) {
+  if (String(event.detail?.ticketId) === String(route.params.id)) {
+    loadDetail()
+  }
+}
+
+onMounted(() => {
+  loadDetail()
+  window.addEventListener('flowticket-ticket-updated', handleTicketUpdated)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('flowticket-ticket-updated', handleTicketUpdated)
+})
 </script>
 
 <style scoped>
+.ticket-detail-page {
+  max-width: 1120px;
+}
+
 .detail-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 320px;
   gap: 16px;
 }
 

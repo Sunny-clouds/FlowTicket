@@ -36,7 +36,7 @@
         </el-table-column>
         <el-table-column label="处理动作" width="230" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" type="primary" @click="$router.push(`/tickets/${row.id}`)">处理</el-button>
+            <el-button size="small" type="primary" @click="$router.push({ path: '/tickets', query: { detailId: row.id } })">处理</el-button>
             <el-button size="small" @click="openReply(row)">回复</el-button>
             <el-button size="small" type="success" @click="openComplete(row)">完成</el-button>
           </template>
@@ -70,13 +70,13 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { fetchTickets, processTicket, replyTicket } from '@/api/ticket'
 import { TICKET_STATUS, priorityLabel, priorityType, statusLabel, statusType } from '@/utils/dicts'
 import { formatDateTime } from '@/utils/format'
 import { useUserStore } from '@/stores/user'
+import { showAppToast, showErrorToast } from '@/utils/toast'
 
 const userStore = useUserStore()
 const loading = ref(false)
@@ -125,20 +125,40 @@ function openComplete(row) {
 }
 
 async function saveReply() {
-  await replyTicket(currentTicket.value.id, { parentId: null, content: replyContent.value })
-  replyDialog.value = false
-  replyContent.value = ''
-  ElMessage.success('回复已保存')
+  try {
+    await replyTicket(currentTicket.value.id, { parentId: null, content: replyContent.value })
+    replyDialog.value = false
+    replyContent.value = ''
+    showAppToast({ message: '回复已保存' })
+    loadTickets()
+  } catch (error) {
+    showErrorToast(error, '回复失败')
+  }
 }
 
 async function complete() {
-  await processTicket(currentTicket.value.id, { content: completeForm.content, handleResult: completeForm.handleResult })
-  completeDialog.value = false
-  ElMessage.success('工单已提交用户确认')
+  try {
+    await processTicket(currentTicket.value.id, { content: completeForm.content, handleResult: completeForm.handleResult })
+    completeDialog.value = false
+    showAppToast({ message: '工单已提交用户确认' })
+    loadTickets()
+  } catch (error) {
+    showErrorToast(error, '提交处理结果失败')
+  }
+}
+
+function handleTicketUpdated() {
   loadTickets()
 }
 
-onMounted(loadTickets)
+onMounted(() => {
+  loadTickets()
+  window.addEventListener('flowticket-ticket-updated', handleTicketUpdated)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('flowticket-ticket-updated', handleTicketUpdated)
+})
 </script>
 
 <style scoped>

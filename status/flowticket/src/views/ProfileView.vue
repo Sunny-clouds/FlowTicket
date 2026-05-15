@@ -1,18 +1,11 @@
 <template>
   <div class="page">
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">个人中心</h2>
-        <p class="page-subtitle">维护当前登录用户的基础信息和联系方式。</p>
-      </div>
-      <el-tag effect="plain">{{ userStore.roleLabel }}</el-tag>
-    </div>
-
     <div class="profile-grid">
       <div class="panel profile-card">
         <el-avatar :size="72" :src="form.avatar">{{ avatarText }}</el-avatar>
         <h3>{{ form.realName }}</h3>
         <p>{{ form.username }}</p>
+        <el-tag class="profile-role" effect="plain">{{ userStore.roleLabel }}</el-tag>
         <el-descriptions :column="1" border>
           <el-descriptions-item label="账号">{{ form.username }}</el-descriptions-item>
           <el-descriptions-item label="角色">{{ userStore.roleLabel }}</el-descriptions-item>
@@ -47,9 +40,9 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { updateUser } from '@/api/user'
 import { useUserStore } from '@/stores/user'
+import { showAppToast, showErrorToast } from '@/utils/toast'
 
 const userStore = useUserStore()
 const saving = ref(false)
@@ -79,7 +72,9 @@ async function save() {
       status: form.status
     })
     userStore.updateProfile(form)
-    ElMessage.success('个人资料已保存')
+    showAppToast({ message: '个人资料已保存' })
+  } catch (error) {
+    showErrorToast(error, '保存个人资料失败')
   } finally {
     saving.value = false
   }

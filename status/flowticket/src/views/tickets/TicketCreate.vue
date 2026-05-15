@@ -46,11 +46,11 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { createTicket } from '@/api/ticket'
 import { fetchCategories } from '@/api/category'
 import { PRIORITY } from '@/utils/dicts'
 import { useUserStore } from '@/stores/user'
+import { showAppToast, showErrorToast } from '@/utils/toast'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -80,12 +80,18 @@ async function loadCategories() {
 }
 
 async function submit() {
-  await formRef.value.validate()
+  try {
+    await formRef.value.validate()
+  } catch (error) {
+    return
+  }
   submitting.value = true
   try {
     await createTicket({ ...form })
-    ElMessage.success('工单已提交')
+    showAppToast({ message: '工单已提交' })
     router.push('/tickets')
+  } catch (error) {
+    showErrorToast(error, '提交工单失败')
   } finally {
     submitting.value = false
   }
