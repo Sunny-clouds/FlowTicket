@@ -280,11 +280,13 @@ FlowTicket 是一个基于 Spring Boot + MyBatis + MySQL 开发的企业级工�
 
 ## 九、后端运行说明
 1. 克隆项目
+```text
 git clone https://github.com/Sunny-clouds/FlowTicket.git
+```
 2. 修改配置
 
 修改 application.yml 中的数据库和 Redis 配置：
-
+```text
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/数据库名
@@ -295,38 +297,41 @@ spring:
     redis:
       host: localhost
       port: 6379
+```
 3. 启动 Redis
 
 确保本地 Redis 服务已启动。
 
 4. 启动后端服务
+```text
 mvn spring-boot:run
-
+```
 默认访问地址：
-
+```text
 http://localhost:8080
-
+```
 接口文档地址：
-
+```text
 http://localhost:8080/doc.html
+```
 前端运行说明
 
 进入前端目录：
-
+```text
 cd status/flowticket
-
+```
 安装依赖：
-
+```text
 npm install
-
+```
 启动项目：
-
+```text
 npm run serve
-
+```
 打包项目：
-
+```text
 npm run build
-
+```
 ## 十、项目状态
 
 当前已完成功能：
